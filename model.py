@@ -1,7 +1,7 @@
 from keras.layers import Input, Dense, Conv2D, Flatten, Lambda, Cropping2D
 from keras.models import Model
 from keras.optimizers import Adam
-from keras.callbacks.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
 from scipy import ndimage
 
@@ -50,7 +50,7 @@ ARCH_LAYERS = [
         
 IMAGE_SHAPE = (160,320)
 
-def init_model(from_checkpoint=input_checkpoint):
+def init_model(from_checkpoint=None):
     inp = Input(shape=IMAGE_SHAPE)
     _inp = inp
     for layer in ARCH_LAYERS:
