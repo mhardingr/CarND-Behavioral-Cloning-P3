@@ -48,7 +48,7 @@ ARCH_LAYERS = [
         Dense(1)
         ]
         
-IMAGE_SHAPE = (160,320)
+IMAGE_SHAPE = (160,320, 3)
 
 def init_model(from_checkpoint=None):
     inp = Input(shape=IMAGE_SHAPE)
@@ -61,7 +61,7 @@ def init_model(from_checkpoint=None):
 
     opti = None
     if HP_DICT['optimizer'] == "Adam":
-        opti = Adam(learning_rate=HP_DICT['start_lr'])
+        opti = Adam(lr=HP_DICT['start_lr'])
     else:
         print("Bad optimizer!")
         sys.exit(-1)
@@ -79,7 +79,7 @@ def augmented_data_from_csv_gen(csv_lines):
     cam_adjust = HP_DICT['static_cam_angle_adjust']
     while True:
         # Shuffle at the beginning of each epoch
-        numpy.random.shuffle(csv_lines)
+        np.random.shuffle(csv_lines)
 
         batchsize = HP_DICT['batchsize']
         for i in range(0, n_samples, batchsize):
@@ -92,10 +92,13 @@ def augmented_data_from_csv_gen(csv_lines):
             steering = []
             for line in lines_batch:
                 csv_entries = line.split(',')
-                paths, y = csv_entries[:-1], float(csv_entries[-1])
+                paths, y = csv_entries[:3], float(csv_entries[3])
                 for i, path in list(enumerate(paths)):
+                    # Update path: TODO: How handle multiple?
+                    # TODO: Use real data
+                    path = "sample_data/" + path.strip()
                     # Open image using RGB, convert to YUV, save a LR-flipped copy
-                    img = cv2.cvtColor(ndimage(path.strip()), cv2.COLOR_RGB2YUV)
+                    img = cv2.cvtColor(ndimage.imread(path), cv2.COLOR_RGB2YUV)
                     flipped_img = np.fliplr(img)
                     images.extend([img, flipped_img])
                     if i == 0:
@@ -113,7 +116,6 @@ def augmented_data_from_csv_gen(csv_lines):
             # Convert to numpy arrays
             images = np.array(images)
             steering = np.array(steering)
-            print("Images shape:", images.shape, "steering shape:", steering.shape)
             yield (images, steering)
 
 def train_model(model, training_lines):
@@ -204,7 +206,7 @@ if __name__ == "__main__":
             sys.exit(-1)
         with open(tr_fn) as tr_f:
             for line in tr_f.readlines():
-                training_lines.append(line.strip()) 
+                training_lines.append(line.strip())
 
     # Initialize the model
     model = init_model(from_checkpoint=args.input_checkpoint)
