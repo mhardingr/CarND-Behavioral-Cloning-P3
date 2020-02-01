@@ -95,7 +95,7 @@ def augmented_data_from_csv_gen(csv_lines):
                 paths, y = csv_entries[:-1], float(csv_entries[-1])
                 for i, path in list(enumerate(paths)):
                     # Open image using RGB, save a LR-flipped copy
-                    img = ndimage(path)
+                    img = ndimage(path.strip())
                     flipped_img = np.fliplr(img)
                     images.extend([img, flipped_img])
                     if i == 0:
