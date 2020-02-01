@@ -11,6 +11,7 @@ import os.path
 import sys
 import tensorflow as tf
 import numpy as np
+import cv2
 
 HP_DICT = {
         'epochs': -1,
@@ -23,7 +24,6 @@ HP_DICT = {
         }
 ARCH_LAYERS = [
         # Input shape: (160,320)
-        Lambda(lambda x: tf.image.rgb_to_yuv(x)),
         # Normalize YUV
         Lambda(lambda x: x/255 - 0.5),
         # Crop top 50 pixels, bottom 20 pixels
@@ -94,8 +94,8 @@ def augmented_data_from_csv_gen(csv_lines):
                 csv_entries = line.split(',')
                 paths, y = csv_entries[:-1], float(csv_entries[-1])
                 for i, path in list(enumerate(paths)):
-                    # Open image using RGB, save a LR-flipped copy
-                    img = ndimage(path.strip())
+                    # Open image using RGB, convert to YUV, save a LR-flipped copy
+                    img = cv2.cvtColor(ndimage(path.strip()), cv2.COLOR_RGB2YUV)
                     flipped_img = np.fliplr(img)
                     images.extend([img, flipped_img])
                     if i == 0:
@@ -113,6 +113,7 @@ def augmented_data_from_csv_gen(csv_lines):
             # Convert to numpy arrays
             images = np.array(images)
             steering = np.array(steering)
+            print("Images shape:", images.shape, "steering shape:", steering.shape)
             yield (images, steering)
 
 def train_model(model, training_lines):
@@ -184,7 +185,7 @@ if __name__ == "__main__":
             else:
                 hyptype = type(HP_DICT[hypname])
                 try:
-                    if hyptype:
+                    if not hyptype == type(None):
                         hypval = hyptype(hypval)
                     HP_DICT[hypname] = hypval
                 except Exception as e:
