@@ -96,7 +96,7 @@ def augmented_data_from_csv_gen(csv_lines):
                 for i, path in list(enumerate(paths)):
                     # Update path: TODO: How handle multiple?
                     # TODO: Use real data
-                    path = "sample_data/" + path.strip()
+                    path = "data/" + path.strip()
                     # Open image using RGB, convert to YUV, save a LR-flipped copy
                     img = cv2.cvtColor(ndimage.imread(path), cv2.COLOR_RGB2YUV)
                     flipped_img = np.fliplr(img)
@@ -119,7 +119,8 @@ def augmented_data_from_csv_gen(csv_lines):
             yield (images, steering)
 
 def train_model(model, training_lines):
-    # Split input dataset into training and validation samples
+    # Shuffle then split input dataset into training and validation samples
+    np.random.shuffle(training_lines)
     train_samples, validation_samples = train_test_split(training_lines,
             test_size=HP_DICT['validation_split'])
     n_tr_samples = len(train_samples)
@@ -205,15 +206,22 @@ if __name__ == "__main__":
             print("Cannot open training data file: %s. Quitting ..." % tr_fn)
             sys.exit(-1)
         with open(tr_fn) as tr_f:
+            skipped_first = False
             for line in tr_f.readlines():
+                if not skipped_first:
+                    skipped_first = True
+                    continue
                 training_lines.append(line.strip())
 
     # Initialize the model
     model = init_model(from_checkpoint=args.input_checkpoint)
 
     # Train the model
-    history = train_model(model, training_lines)
-
+    try:
+        history = train_model(model, training_lines)
+    except Exception(e):
+        print("Caught exception while training: %s\
+\nCleaning up, checkpointing, and outputing summary..." % str(e))
     # Save the model
     model.save(args.output_checkpoint)
 
@@ -227,7 +235,7 @@ if __name__ == "__main__":
     output_summary = "Training summary:\n"
     output_summary += "cmdline: " + " ".join(sys.argv) + "\n"
     output_summary += "Hyperparameters:\n\t" \
-        + "\t".join(map(lambda k: "%s=%s\n".format(k, str(HYP_DICT[k])), HYP_DICT))\
+        + "\t".join(map(lambda k: "%s=%s\n".format(k, str(HP_DICT[k])), HP_DICT))\
         + "\n"
     output_summary += "Total epochs trained: %d\n" % epochs_trained
     print("+"*60+"\n"+output_summary)
