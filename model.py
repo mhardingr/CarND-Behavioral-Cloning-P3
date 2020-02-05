@@ -103,25 +103,21 @@ def augmented_data_from_csv_gen(csv_lines):
                     images.extend([img, flipped_img])
                     if i == 0:
                         # Center image needs no steering adustment
-                        # TODO: steering.extend([y, -y])
-                        steering.extend([1., -1.])
+                         steering.extend([y, -y])
                     elif i == 1:
                         # Left image needs positive adjustment
-                        # TODO: steering.extend([y+cam_adjust, -(y+cam_adjust)])
-                        steering.extend([0., 0.])
+                        steering.extend([y+cam_adjust, -(y+cam_adjust)])
                     elif i == 2:
                         # Right image needs negative adjustment
-                        # TODO: steering.extend([y-cam_adjust, -(y-cam_adjust)])
-                        steering.extend([0.5, -0.5])
+                        steering.extend([y-cam_adjust, -(y-cam_adjust)])
                     else:
                         # Shouldn't be here
                         raise Exception("More images per sample than expected!")
             # Shuffle augmented arrays because don't want to force ordering of batch
-            # TODO: testing
-            # same_state = np.random.get_state()
-            # np.random.shuffle(images)
-            # np.random.set_state(same_state)
-            # np.random.shuffle(steering)
+            same_state = np.random.get_state()
+            np.random.shuffle(images)
+            np.random.set_state(same_state)
+            np.random.shuffle(steering)
             # Convert to numpy arrays
             images = np.array(images)
             steering = np.array(steering)
@@ -221,8 +217,6 @@ if __name__ == "__main__":
                     skipped_first = True
                     continue
                 training_lines.append(line.strip())
-    # TODO: testing training
-    training_lines = training_lines[:5]
 
     # Initialize the model
     model = init_model(from_checkpoint=args.input_checkpoint)
@@ -233,10 +227,6 @@ if __name__ == "__main__":
     except Exception as e:
         print("Caught exception while training: %s\
 \nCleaning up, checkpointing, and outputing summary..." % str(e))
-    # TODO: evaluate training
-    tr_gen = augmented_data_from_csv_gen([training_lines[0]])
-    preds = model.predict_generator(tr_gen, 1)
-    print(preds)
 
     # Save the model
     model.save(args.output_checkpoint)
