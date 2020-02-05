@@ -43,9 +43,9 @@ ARCH_LAYERS = [
         # Input shape: (64, 1, 26)
         Flatten(),
         # Input shape: (1,1664)
-        Dense(200),
-        Dense(64),
-        Dense(1)
+        Dense(200, activation='relu'),
+        Dense(64, activation='relu'),
+        Dense(1, activation='tanh')
         ]
         
 IMAGE_SHAPE = (160,320, 3)
@@ -96,23 +96,32 @@ def augmented_data_from_csv_gen(csv_lines):
                 for i, path in list(enumerate(paths)):
                     # Update path: TODO: How handle multiple?
                     # TODO: Use real data
-                    path = "data/" + path.strip()
+                    path = "data1/data_2_4_2020/IMG/" + path.split('\\')[-1].strip()
                     # Open image using RGB, convert to YUV, save a LR-flipped copy
                     img = cv2.cvtColor(ndimage.imread(path), cv2.COLOR_RGB2YUV)
                     flipped_img = np.fliplr(img)
                     images.extend([img, flipped_img])
                     if i == 0:
                         # Center image needs no steering adustment
-                        steering.extend([y, -y])
+                        # TODO: steering.extend([y, -y])
+                        steering.extend([1., -1.])
                     elif i == 1:
                         # Left image needs positive adjustment
-                        steering.extend([y+cam_adjust, -(y+cam_adjust)])
+                        # TODO: steering.extend([y+cam_adjust, -(y+cam_adjust)])
+                        steering.extend([0., 0.])
                     elif i == 2:
                         # Right image needs negative adjustment
-                        steering.extend([y-cam_adjust, -(y-cam_adjust)])
+                        # TODO: steering.extend([y-cam_adjust, -(y-cam_adjust)])
+                        steering.extend([0.5, -0.5])
                     else:
                         # Shouldn't be here
                         raise Exception("More images per sample than expected!")
+            # Shuffle augmented arrays because don't want to force ordering of batch
+            # TODO: testing
+            # same_state = np.random.get_state()
+            # np.random.shuffle(images)
+            # np.random.set_state(same_state)
+            # np.random.shuffle(steering)
             # Convert to numpy arrays
             images = np.array(images)
             steering = np.array(steering)
@@ -212,6 +221,8 @@ if __name__ == "__main__":
                     skipped_first = True
                     continue
                 training_lines.append(line.strip())
+    # TODO: testing training
+    training_lines = training_lines[:5]
 
     # Initialize the model
     model = init_model(from_checkpoint=args.input_checkpoint)
@@ -219,9 +230,14 @@ if __name__ == "__main__":
     # Train the model
     try:
         history = train_model(model, training_lines)
-    except Exception(e):
+    except Exception as e:
         print("Caught exception while training: %s\
 \nCleaning up, checkpointing, and outputing summary..." % str(e))
+    # TODO: evaluate training
+    tr_gen = augmented_data_from_csv_gen([training_lines[0]])
+    preds = model.predict_generator(tr_gen, 1)
+    print(preds)
+
     # Save the model
     model.save(args.output_checkpoint)
 
@@ -235,11 +251,11 @@ if __name__ == "__main__":
     output_summary = "Training summary:\n"
     output_summary += "cmdline: " + " ".join(sys.argv) + "\n"
     output_summary += "Hyperparameters:\n\t" \
-        + "\t".join(map(lambda k: "%s=%s\n".format(k, str(HP_DICT[k])), HP_DICT))\
+        + "\t".join(map(lambda k: "%s=%s\n".format(k, str(HP_DICT[k])), HP_DICT.keys()))\
         + "\n"
     output_summary += "Total epochs trained: %d\n" % epochs_trained
     print("+"*60+"\n"+output_summary)
     model.summary()
     with open(args.out_summary, 'w') as out_f:
         out_f.write(output_summary)
-        model_summary(print_fn=lambda x: out_f.write(x + "\n"))
+        model.summary(print_fn=lambda x: out_f.write(x + "\n"))
