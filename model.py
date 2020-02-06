@@ -125,9 +125,8 @@ def augmented_data_from_csv_gen(csv_lines):
 
 def train_model(model, training_lines):
     # Shuffle then split input dataset into training and validation samples
-    np.random.shuffle(training_lines)
     train_samples, validation_samples = train_test_split(training_lines,
-            test_size=HP_DICT['validation_split'])
+            test_size=HP_DICT['validation_split'], shuffle=True)
     n_tr_samples = len(train_samples)
     n_val_samples = len(validation_samples)
 
