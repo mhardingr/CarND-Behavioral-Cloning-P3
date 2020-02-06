@@ -67,8 +67,8 @@ def init_model(from_checkpoint=None):
         sys.exit(-1)
 
     if from_checkpoint:
-        print("Loading weights from input checkpoint (%s) ..."%input_checkpoint)
-        model.load_weights(input_checkpoint)
+        print("Loading weights from input checkpoint (%s) ..."%from_checkpoint)
+        model.load_weights(from_checkpoint)
 
     # Compile the deep regression model with the chosen optimizer
     model.compile(opti, loss="mean_squared_error", metrics=['mse'])
@@ -96,7 +96,9 @@ def augmented_data_from_csv_gen(csv_lines):
                 for i, path in list(enumerate(paths)):
                     # Update path: TODO: How handle multiple?
                     # TODO: Use real data
-                    path = "data1/data_2_4_2020/IMG/" + path.split('\\')[-1].strip()
+                    # Preprocess the path (in case paths are from Windows with "\\")
+                    path = path.replace("\\",'/')
+                    path = "data1/data_2_4_2020/IMG/" + path.split('/')[-1].strip()
                     # Open image using RGB, convert to YUV, save a LR-flipped copy
                     img = cv2.cvtColor(ndimage.imread(path), cv2.COLOR_RGB2YUV)
                     flipped_img = np.fliplr(img)
