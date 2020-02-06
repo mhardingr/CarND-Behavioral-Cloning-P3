@@ -145,7 +145,7 @@ def train_model(model, training_lines):
 
     # Train the model using training and validation generators
     tr_history = model.fit_generator(tr_gen, steps_per_epoch=steps_per_epoch,
-            epochs=HP_DICT['epochs'], verbose=1,
+            epochs=HP_DICT['epochs'], verbose=2,
             validation_data=valid_gen, validation_steps=validation_steps,
             callbacks=[earlystop])
     return tr_history
@@ -248,7 +248,7 @@ if __name__ == "__main__":
         + "\t".join(map(lambda k: "%s=%s\n".format(k, str(HP_DICT[k])), HP_DICT.keys()))\
         + "\n"
     output_summary += "Total epochs trained: %d\n" % epochs_trained
-    output_summary += "Training loss: %4.6f; Validation loss: %4.6f\n" % (tr_loss, val_loss)
+    output_summary += "Training loss: %4.6f; Validation loss: %4.6f\n" % (tr_loss[-1], val_loss[-1])
     print("+"*60+"\n"+output_summary)
     model.summary()
     with open(args.out_summary, 'w') as out_f:
