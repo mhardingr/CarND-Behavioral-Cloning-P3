@@ -12,6 +12,7 @@ import sys
 import tensorflow as tf
 import numpy as np
 import cv2
+import json
 
 HP_DICT = {
         'epochs': -1,
@@ -225,8 +226,8 @@ if __name__ == "__main__":
     # Train the model
     try:
         history = train_model(model, training_lines)
-    except Exception as e:
-        print("Caught exception while training: %s\
+    except KeyboardInterrupt:
+        print("Caught Ctrl+C while training: %s\
 \nCleaning up, checkpointing, and outputing summary..." % str(e))
 
     # Save the model
@@ -238,15 +239,27 @@ if __name__ == "__main__":
     # model summary
     # Number of epochs actually trained before training stopped
     # Training and validation losses
-    epochs_trained = len(history.history['loss'])
+    tr_loss = history.history['loss']
+    val_loss = history.history['val_loss']
+    epochs_trained = len(tr_loss)
     output_summary = "Training summary:\n"
     output_summary += "cmdline: " + " ".join(sys.argv) + "\n"
     output_summary += "Hyperparameters:\n\t" \
         + "\t".join(map(lambda k: "%s=%s\n".format(k, str(HP_DICT[k])), HP_DICT.keys()))\
         + "\n"
     output_summary += "Total epochs trained: %d\n" % epochs_trained
+    output_summary += "Training loss: %4.6f; Validation loss: %4.6f\n" % (tr_loss, val_loss)
     print("+"*60+"\n"+output_summary)
     model.summary()
     with open(args.out_summary, 'w') as out_f:
         out_f.write(output_summary)
         model.summary(print_fn=lambda x: out_f.write(x + "\n"))
+
+    # Save the history object for later visualization
+    hist_out = "hist_" + args.out_summary.split('.')[0] + ".json"
+    with open(hist_out, 'w') as hist_f:
+        json.dump(history.history, hist_f)
+        print("Done dumping history to file: %s" % hist_out)
+
+
+
