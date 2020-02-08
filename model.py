@@ -31,12 +31,12 @@ ARCH_LAYERS = [
         # Crop top 50 pixels, bottom 20 pixels
         Cropping2D(cropping=((50,20),(0,0))),
         # Input shape: (90, 320)
-	MaxPooling2D(pool_size=4),
+	MaxPooling2D(pool_size=2),
         # Input shape: (17, 80)
         Conv2D(24, 5, strides=(2,2), padding="same", activation='relu'), # SAME
         Conv2D(36, 5, strides=(2,2), padding="same", activation='relu'), # SAME
         Conv2D(48, 5, strides=(2,2), padding="same", activation='relu'), # SAME
-        Conv2D(64, 3, padding="valid", activation='relu'),
+        Conv2D(64, 3, padding="same", activation='relu'),
         Conv2D(64, 3, padding="valid", activation='relu'),
         Conv2D(64, 3, padding="valid", activation='relu'),
         Flatten(),
@@ -92,13 +92,12 @@ def augmented_data_from_csv_gen(csv_lines):
             # by X_batch entries and transforming them and the 
             # associated steering angle
             images = []
+            speeds = []
             steering = []
             for line in lines_batch:
                 csv_entries = line.split(',')
-                paths, y = csv_entries[:3], float(csv_entries[3])
+                paths, y, speed = csv_entries[:3], float(csv_entries[3]), float(csv_entries[-1].strip())
                 for i, path in list(enumerate(paths)):
-                    # Update path: TODO: How handle multiple?
-                    # TODO: Use real data
                     # Preprocess the path (in case paths are from Windows with "\\")
                     path = path.replace("\\",'/')
                     path = args.training_dir + "IMG/" + path.split('/')[-1].strip()
@@ -106,6 +105,7 @@ def augmented_data_from_csv_gen(csv_lines):
                     img = cv2.cvtColor(ndimage.imread(path), cv2.COLOR_RGB2YUV)
                     flipped_img = np.fliplr(img)
                     images.extend([img, flipped_img])
+                    speeds.extend([speed, speed])
                     if i == 0:
                         # Center image needs no steering adustment
                          steering.extend([y, -y])
@@ -122,11 +122,14 @@ def augmented_data_from_csv_gen(csv_lines):
             same_state = np.random.get_state()
             np.random.shuffle(images)
             np.random.set_state(same_state)
+            np.random.shuffle(speeds)
+            np.random.set_state(same_state)
             np.random.shuffle(steering)
             # Convert to numpy arrays
             images = np.array(images)
+            speeds = np.array(speeds)
             steering = np.array(steering)
-            yield (images, steering)
+            yield [images, speeds], steering
 
 def train_model(model, training_lines):
     # Shuffle then split input dataset into training and validation samples
@@ -147,7 +150,7 @@ def train_model(model, training_lines):
 
     # Train the model using training and validation generators
     tr_history = model.fit_generator(tr_gen, steps_per_epoch=steps_per_epoch,
-            epochs=HP_DICT['epochs'], verbose=2,
+            epochs=HP_DICT['epochs'], verbose=1,
             validation_data=valid_gen, validation_steps=validation_steps,
             callbacks=[earlystop])
     return tr_history
