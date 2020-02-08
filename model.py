@@ -13,6 +13,7 @@ import tensorflow as tf
 import numpy as np
 import cv2
 import json
+import glob
 
 HP_DICT = {
         'epochs': -1,
@@ -30,20 +31,16 @@ ARCH_LAYERS = [
         # Crop top 50 pixels, bottom 20 pixels
         Cropping2D(cropping=((50,20),(0,0))),
         # Input shape: (90, 320)
-        Conv2D(24, 5, strides=(2,2), padding="valid", activation='relu'),
-        # Input shape: (24, 38, 158)
-        Conv2D(36, 5, strides=(2,2), padding="valid", activation='relu'),
-        # Input shape: (36, 17, 77)
+	MaxPooling2D(pool_size=4),
+        # Input shape: (17, 80)
+        Conv2D(24, 5, strides=(2,2), padding="same", activation='relu'), # SAME
+        Conv2D(36, 5, strides=(2,2), padding="same", activation='relu'), # SAME
         Conv2D(48, 5, strides=(2,2), padding="valid", activation='relu'),
-        # Input shape: (48, 7, 32)
         Conv2D(64, 3, padding="valid", activation='relu'),
-        # Input shape: (64, 5, 30)
         Conv2D(64, 3, padding="valid", activation='relu'),
-        # Input shape: (64, 3, 28)
         Conv2D(64, 3, padding="valid", activation='relu'),
-        # Input shape: (64, 1, 26)
         Flatten(),
-        # Input shape: (1,1664)
+	Concatenate(),
         Dense(200, activation='relu'),
         Dense(64, activation='relu'),
         Dense(1, activation='tanh')
@@ -53,12 +50,17 @@ IMAGE_SHAPE = (160,320, 3)
 
 def init_model(from_checkpoint=None):
     inp = Input(shape=IMAGE_SHAPE)
+    speed = Input(shape=(1,))
     _inp = inp
+    out = None
     for layer in ARCH_LAYERS:
-        out = layer(_inp)
+        if isinstance(layer, Concatenate):
+            out = layer([_inp, speed])    
+        else:
+            out = layer(_inp)
         _inp = out
     steering = out
-    model = Model(inputs=inp, outputs=steering)
+    model = Model(inputs=[inp,speed], outputs=steering)
 
     opti = None
     if HP_DICT['optimizer'] == "Adam":
@@ -99,7 +101,7 @@ def augmented_data_from_csv_gen(csv_lines):
                     # TODO: Use real data
                     # Preprocess the path (in case paths are from Windows with "\\")
                     path = path.replace("\\",'/')
-                    path = "data1/data_2_4_2020/IMG/" + path.split('/')[-1].strip()
+                    path = args.training_dir + "IMG/" + path.split('/')[-1].strip()
                     # Open image using RGB, convert to YUV, save a LR-flipped copy
                     img = cv2.cvtColor(ndimage.imread(path), cv2.COLOR_RGB2YUV)
                     flipped_img = np.fliplr(img)
@@ -154,9 +156,9 @@ def train_model(model, training_lines):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
             description="Configurable training pipeline")
-    parser.add_argument('--training-files', dest="training_files",
+    parser.add_argument('--training-directory', dest="training_dir",
             required=True, 
-            help="Comma-separated list of CSV files comprising training data")
+            help="Path to training data folder (containing *.csv files)")
     parser.add_argument('--output-summary', dest="out_summary",
             required=True,
             help="Output filename for summary of training")
@@ -206,7 +208,7 @@ if __name__ == "__main__":
     print("Using following hyperparameter values:\n%s" % HP_DICT)
 
     # Validate and read into memory image pathnames and steering angles
-    training_csvs = [fn.strip() for fn in args.training_files.split(',')]
+    training_csvs = glob.glob(args.training_dir + "/*.csv")
     training_lines = []
     for tr_fn in training_csvs:
         if not os.path.isfile(tr_fn):
@@ -226,7 +228,7 @@ if __name__ == "__main__":
     # Train the model
     try:
         history = train_model(model, training_lines)
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         print("Caught Ctrl+C while training: %s\
 \nCleaning up, checkpointing, and outputing summary..." % str(e))
 
