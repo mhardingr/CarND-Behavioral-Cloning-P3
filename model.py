@@ -1,4 +1,4 @@
-from keras.layers import Input, Dense, Conv2D, Flatten, Lambda, Cropping2D
+from keras.layers import Input, Dense, Conv2D, Flatten, Lambda, Cropping2D, Concatenate, MaxPooling2D
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping
@@ -35,7 +35,7 @@ ARCH_LAYERS = [
         # Input shape: (17, 80)
         Conv2D(24, 5, strides=(2,2), padding="same", activation='relu'), # SAME
         Conv2D(36, 5, strides=(2,2), padding="same", activation='relu'), # SAME
-        Conv2D(48, 5, strides=(2,2), padding="valid", activation='relu'),
+        Conv2D(48, 5, strides=(2,2), padding="same", activation='relu'), # SAME
         Conv2D(64, 3, padding="valid", activation='relu'),
         Conv2D(64, 3, padding="valid", activation='relu'),
         Conv2D(64, 3, padding="valid", activation='relu'),
