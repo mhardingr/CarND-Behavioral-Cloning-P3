@@ -1,7 +1,7 @@
-from keras.layers import Input, Dense, Conv2D, Flatten, Lambda, Cropping2D, Concatenate, MaxPooling2D
+from keras.layers import Input, Dense, Conv2D, Flatten, Lambda, Cropping2D, Concatenate, AveragePooling2D
 from keras.models import Model
 from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, LambdaCallback
 from sklearn.model_selection import train_test_split
 from scipy import ndimage
 
@@ -14,6 +14,8 @@ import numpy as np
 import cv2
 import json
 import glob
+import signal
+import os
 
 HP_DICT = {
         'epochs': -1,
@@ -31,12 +33,10 @@ ARCH_LAYERS = [
         # Crop top 50 pixels, bottom 20 pixels
         Cropping2D(cropping=((50,20),(0,0))),
         # Input shape: (90, 320)
-	MaxPooling2D(pool_size=2),
-        # Input shape: (17, 80)
-        Conv2D(24, 5, strides=(2,2), padding="same", activation='relu'), # SAME
-        Conv2D(36, 5, strides=(2,2), padding="same", activation='relu'), # SAME
-        Conv2D(48, 5, strides=(2,2), padding="same", activation='relu'), # SAME
-        Conv2D(64, 3, padding="same", activation='relu'),
+        Conv2D(24, 5, strides=(2,2), padding="valid", activation='relu'), # SAME
+        Conv2D(36, 5, strides=(2,2), padding="valid", activation='relu'), # SAME
+        Conv2D(48, 5, strides=(2,2), padding="valid", activation='relu'), # SAME
+        Conv2D(64, 3, padding="valid", activation='relu'),
         Conv2D(64, 3, padding="valid", activation='relu'),
         Conv2D(64, 3, padding="valid", activation='relu'),
         Flatten(),
@@ -76,6 +76,7 @@ def init_model(from_checkpoint=None):
     # Compile the deep regression model with the chosen optimizer
     model.compile(opti, loss="mean_squared_error", metrics=['mse'])
     return model
+
 
 def augmented_data_from_csv_gen(csv_lines):
     n_samples = len(csv_lines)
@@ -131,6 +132,14 @@ def augmented_data_from_csv_gen(csv_lines):
             steering = np.array(steering)
             yield [images, speeds], steering
 
+def handle_ctrl_c(signum, frame):
+    global stop_training
+    print("Caught CTRL+C, marking this as the last epoch ...")
+    stop_training=True
+
+signal.signal(signal.SIGINT, handle_ctrl_c)
+stop_training = False
+
 def train_model(model, training_lines):
     # Shuffle then split input dataset into training and validation samples
     train_samples, validation_samples = train_test_split(training_lines,
@@ -147,12 +156,17 @@ def train_model(model, training_lines):
     # Initialize the callbacks for training. TODO: ModelCheckpointing?
     earlystop = EarlyStopping(patience=HP_DICT['stop_patience'],
             verbose=1)
+    def on_epoch_end(self, end, logs):
+        global stop_training
+        if stop_training:
+            self.model.stop_training = True
+    flagstop = LambdaCallback(on_epoch_end=on_epoch_end)
 
     # Train the model using training and validation generators
     tr_history = model.fit_generator(tr_gen, steps_per_epoch=steps_per_epoch,
             epochs=HP_DICT['epochs'], verbose=1,
             validation_data=valid_gen, validation_steps=validation_steps,
-            callbacks=[earlystop])
+            callbacks=[earlystop, flagstop])
     return tr_history
 
 
@@ -227,6 +241,7 @@ if __name__ == "__main__":
 
     # Initialize the model
     model = init_model(from_checkpoint=args.input_checkpoint)
+    model.summary()
 
     # Train the model
     try:
@@ -265,6 +280,3 @@ if __name__ == "__main__":
     with open(hist_out, 'w') as hist_f:
         json.dump(history.history, hist_f)
         print("Done dumping history to file: %s" % hist_out)
-
-
-
