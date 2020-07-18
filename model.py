@@ -45,7 +45,7 @@ ARCH_LAYERS = [
         Dense(64, activation='relu'),
         Dense(1, activation='tanh')
         ]
-        
+
 IMAGE_SHAPE = (160,320, 3)
 
 def init_model(from_checkpoint=None):
@@ -55,7 +55,7 @@ def init_model(from_checkpoint=None):
     out = None
     for layer in ARCH_LAYERS:
         if isinstance(layer, Concatenate):
-            out = layer([_inp, speed])    
+            out = layer([_inp, speed])
         else:
             out = layer(_inp)
         _inp = out
@@ -90,7 +90,7 @@ def augmented_data_from_csv_gen(csv_lines):
             lines_batch = csv_lines[i:i+batchsize]
 
             # Augment minibatch by extracting images referred to
-            # by X_batch entries and transforming them and the 
+            # by X_batch entries and transforming them and the
             # associated steering angle
             images = []
             speeds = []
@@ -149,7 +149,7 @@ def train_model(model, training_lines):
 
     # Initialize generators and fit_generator args
     tr_gen = augmented_data_from_csv_gen(train_samples)
-    valid_gen = augmented_data_from_csv_gen(validation_samples) 
+    valid_gen = augmented_data_from_csv_gen(validation_samples)
     steps_per_epoch = math.ceil(n_tr_samples / HP_DICT['batchsize'])
     validation_steps = math.ceil(n_val_samples / HP_DICT['batchsize'])
 
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
             description="Configurable training pipeline")
     parser.add_argument('--training-directory', dest="training_dir",
-            required=True, 
+            required=True,
             help="Path to training data folder (containing *.csv files)")
     parser.add_argument('--output-summary', dest="out_summary",
             required=True,
@@ -185,6 +185,9 @@ if __name__ == "__main__":
     parser.add_argument("--output-checkpoint", dest="output_checkpoint",
             required=True,
             help="Output checkpoint filename for trained model")
+    parser.add_argument("--training-round", dest="training_round",
+            required=True, type=int,
+            help="Training round number (selects CSVs to use as training data")
     parser.add_argument("--input-checkpoint", dest="input_checkpoint",
             required=False, default=None,
             help="(Optional) Starting checkpoint filename for training")
@@ -202,6 +205,9 @@ if __name__ == "__main__":
         sys.exit(-1)
     if (args.input_checkpoint and not os.path.isfile(args.input_checkpoint)):
         print("Cannot open input checkpoint file to initialize model!")
+        sys.exit(-1)
+    if (args.training_round < 0 or args.training_round > 2):
+        print("Invalid training round number %d" % args.training_round)
         sys.exit(-1)
 
     # Read in and validate hyperparameters
@@ -225,7 +231,8 @@ if __name__ == "__main__":
     print("Using following hyperparameter values:\n%s" % HP_DICT)
 
     # Validate and read into memory image pathnames and steering angles
-    training_csvs = glob.glob(args.training_dir + "/*.csv")
+    # Select training_csvs using training round number
+    training_csvs = glob.glob(args.training_dir + "/tr_round%d/*.csv" % args.training_round)
     training_lines = []
     for tr_fn in training_csvs:
         if not os.path.isfile(tr_fn):
