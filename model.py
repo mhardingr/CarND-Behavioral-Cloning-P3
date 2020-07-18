@@ -233,6 +233,7 @@ if __name__ == "__main__":
     # Validate and read into memory image pathnames and steering angles
     # Select training_csvs using training round number
     training_csvs = glob.glob(args.training_dir + "/tr_round%d/*.csv" % args.training_round)
+    print("Using training_csvs:", training_csvs)
     training_lines = []
     for tr_fn in training_csvs:
         if not os.path.isfile(tr_fn):
@@ -271,8 +272,9 @@ if __name__ == "__main__":
     epochs_trained = len(tr_loss)
     output_summary = "Training summary:\n"
     output_summary += "cmdline: " + " ".join(sys.argv) + "\n"
+    output_summary += "Training data: " + ", ".join(training_csvs) + "\n"
     output_summary += "Hyperparameters:\n\t" \
-        + "\t".join(map(lambda k: "%s=%s\n".format(k, str(HP_DICT[k])), HP_DICT.keys()))\
+        + "\t".join(map(lambda k: "{}={}\n".format(k, str(HP_DICT[k])), HP_DICT.keys()))\
         + "\n"
     output_summary += "Total epochs trained: %d\n" % epochs_trained
     output_summary += "Training loss: %4.6f; Validation loss: %4.6f\n" % (tr_loss[-1], val_loss[-1])
