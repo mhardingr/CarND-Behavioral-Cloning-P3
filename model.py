@@ -1,7 +1,7 @@
 from keras.layers import Input, Dense, Conv2D, Flatten, Lambda, Cropping2D, Concatenate, AveragePooling2D
 from keras.models import Model
 from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, LambdaCallback
+from keras.callbacks import EarlyStopping, Callback
 from sklearn.model_selection import train_test_split
 from scipy import ndimage
 
@@ -140,6 +140,13 @@ def handle_ctrl_c(signum, frame):
 signal.signal(signal.SIGINT, handle_ctrl_c)
 stop_training = False
 
+# Create custom Keras callback for stopping training when Ctrl-C sets glbl flag
+class FlagStopCallback(Callback):
+    def on_epoch_end(self, end, logs):
+        global stop_training
+        if stop_training:
+            self.model.stop_training = True
+
 def train_model(model, training_lines):
     # Shuffle then split input dataset into training and validation samples
     train_samples, validation_samples = train_test_split(training_lines,
@@ -156,11 +163,7 @@ def train_model(model, training_lines):
     # Initialize the callbacks for training. TODO: ModelCheckpointing?
     earlystop = EarlyStopping(patience=HP_DICT['stop_patience'],
             verbose=1)
-    def on_epoch_end(self, end, logs):
-        global stop_training
-        if stop_training:
-            self.model.stop_training = True
-    flagstop = LambdaCallback(on_epoch_end=on_epoch_end)
+    flagstop = FlagStopCallback()
 
     # Train the model using training and validation generators
     tr_history = model.fit_generator(tr_gen, steps_per_epoch=steps_per_epoch,
@@ -232,7 +235,7 @@ if __name__ == "__main__":
 
     # Validate and read into memory image pathnames and steering angles
     # Select training_csvs using training round number
-    training_csvs = glob.glob(args.training_dir + "/tr_round%d/*.csv" % args.training_round)
+    training_csvs = glob.glob(args.training_dir + "tr_round%d/*.csv" % args.training_round)
     print("Using training_csvs:", training_csvs)
     training_lines = []
     for tr_fn in training_csvs:
