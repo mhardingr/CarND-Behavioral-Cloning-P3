@@ -24,7 +24,8 @@ HP_DICT = {
         'start_lr': -1.0,
         'optimizer': None,
         'static_cam_angle_adjust': -1.0,
-        'validation_split': -1.0
+        'validation_split': -1.0,
+        'freeze_feature_layers':False
         }
 ARCH_LAYERS = [
         # Input shape: (160,320)
@@ -49,6 +50,8 @@ ARCH_LAYERS = [
 IMAGE_SHAPE = (160,320, 3)
 
 def init_model(from_checkpoint=None):
+    freeze_feature_layers = HP_DICT['freeze_feature_layers']
+
     inp = Input(shape=IMAGE_SHAPE)
     speed = Input(shape=(1,))
     _inp = inp
@@ -61,6 +64,13 @@ def init_model(from_checkpoint=None):
         _inp = out
     steering = out
     model = Model(inputs=[inp,speed], outputs=steering)
+    # Due to TF bug, we can only freeze layers after Model init
+    # which is useful for certain rounds in which we want to tune
+    # only the network head (the Dense/FC layers)
+    if freeze_feature_layers:
+        for layer in model.layers:
+            if not isinstance(layer, Dense):
+                layer.trainable=False
 
     opti = None
     if HP_DICT['optimizer'] == "Adam":
