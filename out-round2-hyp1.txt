@@ -1,17 +1,18 @@
 Training summary:
-cmdline: model.py --training-config configs/round2-hyp1.config --training-dir /opt/data1/data_2_4_2020/ --output-checkpoint model-round2-hyp1.h5 --output-summary out-round2-hyp1.txt --training-round 2 --input-checkpoint model-round1-hyp0.h5
+cmdline: model.py --training-dir /opt/data1/data_2_4_2020/ --training-config configs/round2-hyp1.config --output-checkpoint model-round2-hyp1.h5 --output-summary out-round2-hyp1.txt --input-checkpoint model-round1-hyp0.h5 --training-round 2
 Training data: /opt/data1/data_2_4_2020/tr_round2/1_forwardx2_driving_log.csv, /opt/data1/data_2_4_2020/tr_round2/1_backwardx3_driving_log.csv, /opt/data1/data_2_4_2020/tr_round2/round2_driving_log.csv
 Hyperparameters:
-	optimizer=Adam
 	validation_split=0.2
-	static_cam_angle_adjust=0.15
-	stop_patience=3
 	batchsize=16
-	start_lr=5e-06
+	static_cam_angle_adjust=0.15
 	epochs=5
+	start_lr=5e-06
+	stop_patience=3
+	freeze_feature_layers=True
+	optimizer=Adam
 
 Total epochs trained: 5
-Training loss: 0.007233; Validation loss: 0.007326
+Training loss: 0.009337; Validation loss: 0.009110
 __________________________________________________________________________________________________
 Layer (type)                    Output Shape         Param #     Connected to                     
 ==================================================================================================
@@ -47,6 +48,6 @@ ________________________________________________________________________________
 dense_3 (Dense)                 (None, 1)            65          dense_2[0][0]                    
 ==================================================================================================
 Total params: 975,205
-Trainable params: 975,205
-Non-trainable params: 0
+Trainable params: 806,929
+Non-trainable params: 168,276
 __________________________________________________________________________________________________
