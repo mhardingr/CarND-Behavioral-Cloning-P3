@@ -219,7 +219,7 @@ if __name__ == "__main__":
     if (args.input_checkpoint and not os.path.isfile(args.input_checkpoint)):
         print("Cannot open input checkpoint file to initialize model!")
         sys.exit(-1)
-    if (args.training_round < 1 or args.training_round > 3):
+    if (args.training_round < 1 or args.training_round > 4):
         print("Invalid training round number %d" % args.training_round)
         sys.exit(-1)
 
