@@ -1,18 +1,18 @@
 Training summary:
-cmdline: model.py --training-directory /opt/data1/data_2_4_2020/ --training-config configs/round4-hyp1.config --output-checkpoint model-round4-hyp1.h5 --output-summary out-round4-hyp1.txt --input-checkpoint model-round3-hyp2.h5 --training-round 4
-Training data: /opt/data1/data_2_4_2020/tr_round4/1_forwardx2_driving_log.csv, /opt/data1/data_2_4_2020/tr_round4/1_backwardx3_driving_log.csv, /opt/data1/data_2_4_2020/tr_round4/round2_driving_log.csv
+cmdline: model.py --training-directory recoveries-round4/ --training-config configs/round4-hyp1.config --input-checkpoint model-round3-hyp2.h5 --output-checkpoint model-round4-hyp1.h5 --output-summary out-round4-hyp1.txt --training-round 4
+Training data: recoveries-round4/tr_round4/driving_log.csv
 Hyperparameters:
-	batchsize=16
 	stop_patience=3
-	static_cam_angle_adjust=0.15
-	epochs=5
 	freeze_feature_layers=True
+	start_lr=5e-07
+	static_cam_angle_adjust=0.15
+	batchsize=16
 	validation_split=0.2
 	optimizer=Adam
-	start_lr=5e-06
+	epochs=5
 
 Total epochs trained: 5
-Training loss: 0.008541; Validation loss: 0.008497
+Training loss: 0.013364; Validation loss: 0.013399
 __________________________________________________________________________________________________
 Layer (type)                    Output Shape         Param #     Connected to                     
 ==================================================================================================
