@@ -18,6 +18,8 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
+TODO
+
 [image1]: ./examples/placeholder.png "Model Visualization"
 [image2]: ./examples/placeholder.png "Grayscaling"
 [image3]: ./examples/placeholder_small.png "Recovery Image"
@@ -43,34 +45,70 @@ My project includes the following files:
 #### 2. Submission includes functional code
 Using the Udacity provided simulator and my drive.py file, the car can be driven autonomously around the track by executing 
 ```sh
-python drive.py model.h5
+python drive.py final-training/final-model.h5
 ```
 
 #### 3. Submission code is usable and readable
 
 The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
 
+The model.py file has the following usage details:
+```sh
+usage: model.py [-h] --training-directory TRAINING_DIR --output-summary
+                OUT_SUMMARY --training-config TRAINING_CONFIG
+                --output-checkpoint OUTPUT_CHECKPOINT --training-round
+                TRAINING_ROUND [--input-checkpoint INPUT_CHECKPOINT]
+
+Configurable training pipeline
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --training-directory TRAINING_DIR
+                        Path to training data folder (containing *.csv files)
+  --output-summary OUT_SUMMARY
+                        Output filename for summary of training
+  --training-config TRAINING_CONFIG
+                        Hyperparamter configuration file
+  --output-checkpoint OUTPUT_CHECKPOINT
+                        Output checkpoint filename for trained model
+  --training-round TRAINING_ROUND
+                        Training round number (selects CSVs to use as training
+                        data)
+  --input-checkpoint INPUT_CHECKPOINT
+                        (Optional) Starting checkpoint filename for training
+```
+
 ### Model Architecture and Training Strategy
 
 #### 1. An appropriate model architecture has been employed
 
-My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 128 (model.py lines 18-24) 
-
-The model includes RELU layers to introduce nonlinearity (code line 20), and the data is normalized in the model using a Keras lambda layer (code line 18). 
+My model's architecture is outined by the global variable `ARCH_LAYERS` defined in model.py:30-48. This model is a slight modification of the NVIDIA paper "End to End Learning for Self-driving Cars" ([link](https://arxiv.org/pdf/1604.07316v1.pdf)).
+In particular, the input layer expects images of size (160,320,3) converted to the YUV colorspace. This is followed by a standard normalization layer in which pixels are scaled to the range [-.5,.5].
+Next, a cropping layer precedes the convolutional layers to remove the top 50 and bottom 20 pixels, thereby removing the influence of the features of the sky and the hood of the car on the steering commands of the model.
+The convolutional layers are exactly the same as in the NVIDIA paper's CNN, except there is now an additional final layer of of 64 3x3 kernels. Theese feature-extraction layers are connected by ReLU activation functions.
+After the feature-extraction layers, the output is flattened and concatenated with an additional input, the current speed of the car as measured by the simulator. 
+This allows the steering commands to be influenced by the current speed of the car.
+Lastly, the final 3 layers are fully connected layers such that 2 RELU-activated layers transform the output to a vector of size 64, which is converted to a steering signal between [-1., 1] by a final Dense layer with a `tanh` activation.
 
 #### 2. Attempts to reduce overfitting in the model
 
-The model contains dropout layers in order to reduce overfitting (model.py lines 21). 
-
-The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
+To reduce overfitting, the model was trained using a configurable split of the input dataset into training data and validation data (model.py:162). Additionally, several methods of data augmentation (namely, horizontal flipping all input images and utilizing the left and right camera images) were introduced at training time to cancel a potential bias for left turns and instability when driving off the center of the track. 
+The model was also trained in "rounds" which consisted of meaningful slices of a larger dataset: round 1 included the sample dataset exemplifying normal driving around the track, round 2 consisted of a much larger dataset including a number of forward and backward laps of the track, and round 3 purely contained images emphasizing difficult turns and examples of recoveries to the center of the track lane.
+This incremental approach allowed for intermediate evaluation and targeted learning of the model, which allowed for a more coherent ability to navigate track 1 and track 2.
 
 #### 3. Model parameter tuning
 
-The model used an adam optimizer, so the learning rate was not tuned manually (model.py line 25).
+As shown in the usage for model.py, a `training-config` parameter must be defined which refers to a file containing values for several hyperparameters. These
+hyperparameters are maintained at runtime within the global variable `HP_DICT` (defined model.py:20) and referenced throughout the file.
+The hyperparameters include the number of training epochs, the training's patience for plateaued performance, the batch-size, the initial learning rate,
+the name of the optimizer (i.e. "Adam"), the adjustment value for the steering value of left and right images, the proportion of the validation set,
+and whether or not to freeze the layers before the fully-connected layers during training.
+
+The Adam optimizer was heavily used to simplify the learning rate tuning, however the `start_lr` parameter was used to limit the influence of training on later rounds of training to allow for incremental and consistent model training and improvements.
 
 #### 4. Appropriate training data
 
-Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road ... 
+Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road, and driving the track in the forwards and backwards positions. Most of the training data was collected at or just below the top-speed of 30mph.
 
 For details about how I created the training data, see the next section. 
 
