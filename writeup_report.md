@@ -18,17 +18,16 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-TODO
-
-[image1]: ./examples/placeholder.png "Model Visualization"
-[image2]: ./examples/placeholder.png "Round 1 example"
-[image3]: ./examples/placeholder_small.png "Round 2 example forward"
-[image4]: ./examples/placeholder_small.png "Round 2 example reverse"
-[image5]: ./examples/placeholder_small.png "Round 2 example random"
-[image6]: ./examples/placeholder_small.png "Round 3 example dirt"
-[image7]: ./examples/placeholder_small.png "Round 3 example sharp"
-[image8]: ./examples/placeholder_small.png "Normal image"
-[image9]: ./examples/placeholder_small.png "Flipped Image"
+[image0]: ./examples/round1/left_2016_12_01_13_31_14_803.jpg "Round 1 left"
+[image1]: ./examples/round1/center_2016_12_01_13_31_14_803.jpg "Round 1 center"
+[image2]: ./examples/round1/right_2016_12_01_13_31_14_803.jpg "Round 1 right"
+[image3]: ./examples/round2/forward_center_2020_02_04_20_32_18_752.jpg "Round 2 example forward"
+[image4]: ./examples/round2/backward_center_2020_02_04_20_41_20_477.jpg "Round 2 example reverse"
+[image5]: ./examples/round2/random_center_2020_02_06_06_21_17_458.jpg "Round 2 example random"
+[image6]: ./examples/round3/dirt_center_2020_02_07_16_23_50_927.jpg "Round 3 example dirt"
+[image7]: ./examples/round3/sharp_left_center_2020_02_07_16_20_28_655.jpg "Round 3 example sharp"
+[image8]: ./examples/flipped/center_2016_12_01_13_31_14_803.jpg "Normal image"
+[image9]: ./examples/flipped/flipped_center_2016_12_01_13_31_14_803.jpg "Flipped Image"
 
 ## Rubric Points
 ### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -190,6 +189,8 @@ Sample images from each round of training data:
 
 Round 1 (sample dataset):
 
+![alt text][image0]
+![alt text][image1]
 ![alt text][image2]
 
 Round 2 (bulk "good" dataset, balanced with forward and backward laps):
