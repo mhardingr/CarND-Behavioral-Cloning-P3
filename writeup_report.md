@@ -21,12 +21,14 @@ The goals / steps of this project are the following:
 TODO
 
 [image1]: ./examples/placeholder.png "Model Visualization"
-[image2]: ./examples/placeholder.png "Grayscaling"
-[image3]: ./examples/placeholder_small.png "Recovery Image"
-[image4]: ./examples/placeholder_small.png "Recovery Image"
-[image5]: ./examples/placeholder_small.png "Recovery Image"
-[image6]: ./examples/placeholder_small.png "Normal Image"
-[image7]: ./examples/placeholder_small.png "Flipped Image"
+[image2]: ./examples/placeholder.png "Round 1 example"
+[image3]: ./examples/placeholder_small.png "Round 2 example forward"
+[image4]: ./examples/placeholder_small.png "Round 2 example reverse"
+[image5]: ./examples/placeholder_small.png "Round 2 example random"
+[image6]: ./examples/placeholder_small.png "Round 3 example dirt"
+[image7]: ./examples/placeholder_small.png "Round 3 example sharp"
+[image8]: ./examples/placeholder_small.png "Normal image"
+[image9]: ./examples/placeholder_small.png "Flipped Image"
 
 ## Rubric Points
 ### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -112,56 +114,104 @@ Training data was chosen to keep the vehicle driving on the road. I used a combi
 
 For details about how I created the training data, see the next section. 
 
-### Model Architecture and Training Strategy
+### Architecture and Training Documentation
 
 #### 1. Solution Design Approach
 
-The overall strategy for deriving a model architecture was to ...
-
-My first step was to use a convolution neural network model similar to the ... I thought this model might be appropriate because ...
-
-In order to gauge how well the model was working, I split my image and steering angle data into a training and validation set. I found that my first model had a low mean squared error on the training set but a high mean squared error on the validation set. This implied that the model was overfitting. 
-
-To combat the overfitting, I modified the model so that ...
-
-Then I ... 
-
-The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track... to improve the driving behavior in these cases, I ....
-
-At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
+I chose to begin my architecture search with the NVIDIA paper's proven but simple CNN model, as described above. To account for the network simpler input space (due to the simulator's relative simplicity), I made modifications
+that would speed up training as well as combat overfitting, such as (statically, within the network) cropping the sky and the ego-car's hood from the image input (as discussed above).
+One other change I made from the original architecture was to add a 6th convolutional layer, which mostly served the purpose of halving the size of the feature-extraction output and improved training times.
+The final fully-connected layers are the most computationally and memory expensive to compute, so halving their input size was significant.
 
 #### 2. Final Model Architecture
 
-The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
+The final model architecture (model.py:30-48) is as described under Model Architecture and Training Strategy, section 1. The verbose model architecture is outline below in Tensorflow output format:
 
-Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
-
-![alt text][image1]
+```
+Layer (type)                    Output Shape         Param #     Connected to
+==================================================================================================
+input_1 (InputLayer)            (None, 160, 320, 3)  0
+__________________________________________________________________________________________________
+lambda_1 (Lambda)               (None, 160, 320, 3)  0           input_1[0][0]
+__________________________________________________________________________________________________
+cropping2d_1 (Cropping2D)       (None, 90, 320, 3)   0           lambda_1[0][0]
+__________________________________________________________________________________________________
+conv2d_1 (Conv2D)               (None, 43, 158, 24)  1824        cropping2d_1[0][0]
+__________________________________________________________________________________________________
+conv2d_2 (Conv2D)               (None, 20, 77, 36)   21636       conv2d_1[0][0]
+__________________________________________________________________________________________________
+conv2d_3 (Conv2D)               (None, 8, 37, 48)    43248       conv2d_2[0][0]
+__________________________________________________________________________________________________
+conv2d_4 (Conv2D)               (None, 6, 35, 64)    27712       conv2d_3[0][0]
+__________________________________________________________________________________________________
+conv2d_5 (Conv2D)               (None, 4, 33, 64)    36928       conv2d_4[0][0]
+__________________________________________________________________________________________________
+conv2d_6 (Conv2D)               (None, 2, 31, 64)    36928       conv2d_5[0][0]
+__________________________________________________________________________________________________
+flatten_1 (Flatten)             (None, 3968)         0           conv2d_6[0][0]
+__________________________________________________________________________________________________
+input_2 (InputLayer)            (None, 1)            0
+__________________________________________________________________________________________________
+concatenate_1 (Concatenate)     (None, 3969)         0           flatten_1[0][0]
+                                                                 input_2[0][0]
+__________________________________________________________________________________________________
+dense_1 (Dense)                 (None, 200)          794000      concatenate_1[0][0]
+__________________________________________________________________________________________________
+dense_2 (Dense)                 (None, 64)           12864       dense_1[0][0]
+__________________________________________________________________________________________________
+dense_3 (Dense)                 (None, 1)            65          dense_2[0][0]
+==================================================================================================
+Total params: 975,205
+Trainable params: 975,205
+Non-trainable params: 0
+__________________________________________________________________________________________________   
+```
 
 #### 3. Creation of the Training Set & Training Process
 
-To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
+For the creation of the training data, I followed the overarching principles of: 1) have a lot of good quality data, 2) balance that data as much as possible, and 3) include examples of recoveries for model robustness.
+I used the 8037 images from the sample training set, and added ~25k images of my own. ~21k of my images were recorded from ~5 laps of good driving (roughly center-lane only) for both forward and reverse laps, and a small focused subset of ~3k images were recorded purely focused on sharp turns, edge-cases like turns with a dirt border, and some recovery maneuvers from the sides of the lane back to the center.
+
+Some notes on the training method itself:
+To train my model, I leveraged Python generators to minimize memory pressure and CPU computing bottlenecks - i.e. the batches of images and target steering angles were prepared on-the-fly from the CSV files.
+In preparing the final model, a training round number selected the CSV files (and therefore the subset of training set) to learn from. The final model was 
+trained using the same batch size of 16x3x2 (96 images) - 16 lines from the CSV, which included 3 images for left/right/center that were each flipped once horizontally.
+The left and right images were leveraged to introduce robustness to the model because these images were associated with a statically adjusted steering angle - the left image added .15 to the center image's steering value, and right image subtracted this amount.
+Concerning the dataset for each round of training, the training data was first shuffled then split into 80% training data, 20% validation. Shuffling occurred between epochs and within training batches produced by the generator.
+Lastly, training rounds were only successful if the validation error decreased appreciably from the start of training, and so long as the model at least maintained its
+prior rounds' level of driving performance. Note: the evaluation of the model in simulation after rounds of training was done at a speed almost half that of the training set because this seemed to greatly dampen steering oscillations likely due to a relatively small overall training dataset.
+
+Overall training story:
+As mentioned, training occurred in rounds in order to incrementally introduce improved driving behavior into the model. Round 1 subset of the training data included on the sample training data in order to exemplify both image features and steering angles of good driving for a lap or two.
+Round 2's subset was a much larger dataset consisting of the 5+ laps of my own driving on track 1 for both forward and reverse directions (i.e. ~10 laps of good driving). 
+Lastly, round 3's subset was a focused small dataset focused on edge-cases and recoveries.
+
+Sample images from each round of training data:
+
+Round 1 (sample dataset):
 
 ![alt text][image2]
 
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to .... These images show what a recovery looks like starting from ... :
+Round 2 (bulk "good" dataset, balanced with forward and backward laps):
 
 ![alt text][image3]
 ![alt text][image4]
 ![alt text][image5]
 
-Then I repeated this process on track two in order to get more data points.
-
-To augment the data sat, I also flipped images and angles thinking that this would ... For example, here is an image that has then been flipped:
+Round 3 (recovery dataset):
 
 ![alt text][image6]
 ![alt text][image7]
 
-Etc ....
+Below is an example of the data augmentation done within the generator: horizontal flipping of any of the left/right/center images.
 
-After the collection process, I had X number of data points. I then preprocessed this data by ...
+![alt text][image8]
+![alt text][image9]
 
 
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
-
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
+The training story was therefore: after training 10 epochs of round 1 training data with a large starting learning rate (1e-4), the model effectively learned how to successfully drive to the sharp left turn after the bridge.
+This model was capable of reaching the other end of the bridge 4/5 times, and would exhibit large steering oscillations while still staying within the driving surface of the road.
+Therefore, the purpose of the second round of training would be to greatly dampen the steering oscillations and bolster the robustness of this starting model. It would be the focus of the third round to teach the model to navigate the dirt-bordered and other sharp turns without taking away from the non-edge case performance of the model learned from rounds 1 and 2.
+This was done successfully by training the model in round 2 for 10 epochs using a smaller starting learning rate (5e-6) and frozen feature-extraction layers (effectively "transfer learning" - only the final fully-connected layers were tunable) followed by 5 epochs of round 3 training data with the same small learning rate (5e-6) and thawed feature-extraction layers (thereby enabling the model to learn the features of dirt-bordered turns and sharp turns and to recognize when recovery maneuvers were necessary).
+A key element of this form of incremental training was to decrease the starting learning rates in order to prevent "overwriting" the improvements of the previous model, and this is also a form of combatting overfitting.
+It can be said that a mix of "transfer learning" and "fine-tuning" was used by the second and third rounds of training in order to implant certain behaviors into a good base driving model.
